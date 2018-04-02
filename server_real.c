@@ -24,7 +24,7 @@ char* res404 = "HTTP/1.0 404 NOT FOUND\nServer: NWH\nContent-Type: text/html\n\n
 
 // Function Declarations 
 char* concat(char* s1, char* s2);
-
+void print_res(int sockfd, int response);
 
 //--------------------------------------------------------------------------------------------------
 /* Main Functions
@@ -41,6 +41,7 @@ main(int argc, char *argv[])
     char buffer[256];
     // Declaring the string later used to assign to the root directory.
     char* root;
+    
 
     // Structs for server and client address
     struct sockaddr_in serv_addr, cli_addr;
@@ -126,6 +127,7 @@ concat(char* s1, char* s2) {
 // Print function to output the response that the server would give
 void 
 print_res(int sockfd, int response) {
+    int n;
     // Check the type of response coming in
 
     switch(response) {
