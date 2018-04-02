@@ -17,6 +17,10 @@
 // Constant Declarations and Initialisation
 #define BUFFERSIZE 256
 
+// Resquest Reponses
+char* res200 = "HTTP/1.0 200 OK\nServer: NWH\nContent-Type: text/html\n\n";
+char* res404 = "HTTP/1.0 404 NOT FOUND\nServer: NWH\nContent-Type: text/html\n\n";
+
 
 // Function Declarations 
 char* concat(char* s1, char* s2);
@@ -66,10 +70,35 @@ main(int argc, char *argv[])
         exit(1);
     }
 
+    // Allocating memory for server_addr
+    bzero((char *) &serv_addr, sizeof(serv_addr));
+
+    /* Create address we're going to listen on (given port number)
+     - converted to network byte order & any IP address for 
+     this machine */
     
-    
+    // Determining what type of socket is created using socket()
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    // Specify the port to use for connections
+    serv_addr.sin_port = htons(portno);
+
+
     // ---------------------------------------
 
+    // ---------------------------------------
+    /* Binding*/
+
+    // Binding socket to the specified address
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+        perror("ERROR on binding");
+        exit(1);
+    }
+
+
+
+
+    // ---------------------------------------
     return 0;
 }
 
@@ -94,7 +123,26 @@ concat(char* s1, char* s2) {
     return concat_str;
 }
 
+// Print function to output the response that the server would give
+void 
+print_res(int sockfd, int response) {
+    // Check the type of response coming in
 
+    switch(response) {
+        case 200:
+        write(sockfd,res200,18);
+        break;
 
+        case 404:
+        write(sockfd,res404,18);
+        break;
+    }
+
+    // Break the program if there are errors writing
+    if (n < 0) {
+        perror("ERROR writing to socket");
+        exit(1);
+    }
+}
 
 
