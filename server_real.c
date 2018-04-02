@@ -14,15 +14,22 @@
 #include <unistd.h>
 #include <netinet/in.h>
 
+// Constant Declarations and Initialisation
+#define BUFFERSIZE 256
+
+
 // Function Declarations 
 char* concat(char* s1, char* s2);
 
 
 //--------------------------------------------------------------------------------------------------
+/* Main Functions
+ *
+ */
 
 // Main Function
 int 
-main(int argc, char const *argv[])
+main(int argc, char *argv[])
 {   
     // Declaring the sockets file descriptions and the port number.
     int sockfd, newsockfd, portno;// clilen;
@@ -31,10 +38,13 @@ main(int argc, char const *argv[])
     // Declaring the string later used to assign to the root directory.
     char* root;
 
+    // Structs for server and client address
+    struct sockaddr_in serv_addr, cli_addr;
+    socklen_t clilen;
+
 
     // Checking if the number of command line arguements are valid
-    if (argc < 3) 
-    {
+    if (argc < 3) {
         fprintf(stderr,"ERROR, no port or root path provided! \n");
         exit(1);
     }
@@ -44,26 +54,47 @@ main(int argc, char const *argv[])
     portno = atoi(argv[1]);
     // Copy and then concatenating the root path with the one from the request
 
+
+    // ---------------------------------------
+    /* Creating TCP Socket*/
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Return an error if the socket cannot be opened
+    if (sockfd < 0) {
+        perror("ERROR opening socket");
+        exit(1);
+    }
+
+    
+    
+    // ---------------------------------------
+
     return 0;
 }
 
 
 //--------------------------------------------------------------------------------------------------
+/* Helper Functions
+ *
+ */
 
 // Concatenate function to appending one string to another
 char*
-concat(char* s1, char* s2) 
-{   
-    // Defining a buffer string variable for strcpy and the final return string
-    char* buffer[256];
-    char* concat_str = "\0";
+concat(char* s1, char* s2) {   
+    // Determine the length of the output and allocating memory for it
+    int output_len = strlen(s1) + strlen(s2) + 1;
+    char* concat_str = (char*)malloc(output_len * sizeof(char));
 
-    // Copy the first string into the buffer
-    strcpy(buffer, s1);
-    // Concat the second on onto the buffer afterwards
-    strcat(buffer, s2);
+    // Copy the first string into the allocated return string
+    strcpy(concat_str, s1);
+    // Concat the second on onto the allocated return string afterwards
+    strcat(concat_str, s2);
 
-    return
+    return concat_str;
 }
+
+
+
 
 
