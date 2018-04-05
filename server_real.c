@@ -1,7 +1,8 @@
 /**
  * Project Code for Computer Systems COMP30023 2018 S1
  * A simple HTML 1.0 Web Server which handles basic GET requests 
- * To compile: gcc
+ * To compile: Run the Makefile with "make" OR
+ *             gcc -o server_real server_real.c
  * Written by: 828472
  */
 
