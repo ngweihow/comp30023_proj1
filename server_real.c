@@ -16,11 +16,12 @@
 #include <netinet/in.h>
 
 // Constant Declarations and Initialisation
-#define BUFFERSIZE 256
+#define BUFFERSIZE 8192
+#define SPACE '%20'
 
 // Resquest Reponses
-char* res200 = "HTTP/1.0 200 OK\nServer: NWH\nContent-Type: text/html\n\n";
-char* res404 = "HTTP/1.0 404 NOT FOUND\nServer: NWH\nContent-Type: text/html\n\n";
+char* const res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
+char* const res404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: %s\r\n\r\n";
 
 
 // Function Declarations 
@@ -39,7 +40,7 @@ main(int argc, char *argv[])
     // Declaring the sockets file descriptions and the port number.
     int sockfd, newsockfd, portno;// clilen;
     // Char array used as a string buffer.
-    char buffer[256];
+    char* buffer;
     // Declaring the string later used to assign to the root directory.
     char* root;
     
@@ -73,7 +74,8 @@ main(int argc, char *argv[])
     }
 
     // Allocating memory for server_addr
-    bzero((char *) &serv_addr, sizeof(serv_addr));
+    memset(&serv_addr, '0', sizeof(serv_addr));
+
 
     /* Create address we're going to listen on (given port number)
      - converted to network byte order & any IP address for 
@@ -87,8 +89,6 @@ main(int argc, char *argv[])
 
 
     // ---------------------------------------
-
-    // ---------------------------------------
     /* Binding*/
 
     // Binding socket to the specified address
@@ -97,6 +97,40 @@ main(int argc, char *argv[])
         exit(1);
     }
 
+    // ---------------------------------------
+    /* Listening*/
+
+    /* Listen on socket - means we're ready to accept connections - 
+     incoming connection requests will be queued */
+    listen(sockfd,10);
+    
+    clilen = sizeof(cli_addr);
+
+    // ---------------------------------------
+    /* Accepting*/
+
+    /* Accept a connection - block until a connection is ready to
+     be accepted. Get back a new file descriptor to communicate on. */
+
+    // Loop forever if there are requests coming from the socket
+    while(1) {
+        // Assigning a new socket to the accepted one
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+        // Exit on error with accept
+        if (newsockfd < 0) {
+            perror("ERROR on accept");
+            exit(1);
+        }    
+
+        // Allocate Space to the buffer
+        memset(&buffer, '0', BUFFERSIZE);
+
+        // Read characters from the socket and then process them
+        int n = parse_file(newsockfd, buffer);
+
+    }
+    
+    
 
 
 
@@ -127,17 +161,17 @@ concat(char* s1, char* s2) {
 
 // Print function to output the response that the server would give
 void 
-print_res(int sockfd, int response) {
+print_res(int sockfd, int response, int bytes) {
     int n;
     // Check the type of response coming in
 
     switch(response) {
         case 200:
-        write(sockfd,res200,18);
+        write(sockfd,res200,bytes);
         break;
 
         case 404:
-        write(sockfd,res404,18);
+        write(sockfd,res404,bytes);
         break;
     }
 
@@ -148,4 +182,40 @@ print_res(int sockfd, int response) {
     }
 }
 
+// File Reading Function to parse the GET request
+int 
+parse_file(int sockfd, char* buffer) {
+    FILE *fp;
+    unsigned long file_len;
 
+    // Opening the binary file
+    fp = fopen(sockfd, 'r');
+
+    if(!fp) {
+        perror("ERROR reading from socket");
+        exit(1);
+    }
+
+    // Get the file length
+    fseek(fp, 0, SEEK_END);
+    file_len=ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    
+
+    
+}
+
+// Copy the contents of the file into the buffer string
+void
+copy_to_buffer(FILE *fp, int *n, char* buffer) {
+    int c;
+    int lines=0;
+
+    // While end of file not reached
+    while((c = getc(fp)) != EOF) {
+        // Copies each character into the buffer
+        buffer[*n++] = c; 
+    }
+    return;
+}
