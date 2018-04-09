@@ -17,7 +17,7 @@
 
 // Constant Declarations and Initialisation
 #define BUFFERSIZE 8192
-#define SPACE '%20'
+#define SPACE "%20"
 
 // Resquest Reponses
 char* const res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
@@ -26,7 +26,10 @@ char* const res404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: %s\r\n\r\n";
 
 // Function Declarations 
 char* concat(char* s1, char* s2);
-void print_res(int sockfd, int response);
+void print_res(int sockfd, int response, int bytes);
+int read_file(int sockfd, char* buffer);
+void copy_to_buffer(FILE *fp, int *n, char* buffer);
+char* parse_header(const char *str, const char *space);
 
 //--------------------------------------------------------------------------------------------------
 /* Main Functions
@@ -126,7 +129,21 @@ main(int argc, char *argv[])
         memset(&buffer, '0', BUFFERSIZE);
 
         // Read characters from the socket and then process them
-        int n = parse_file(newsockfd, buffer);
+        int n = read_file(newsockfd, buffer);
+
+        // Error Handling if error from reading to socket
+        if(n < 0) {
+        perror("ERROR reading from socket");
+        exit(1);
+        }
+
+        // Parse the header in the buffer and extract the path
+        char* relative_path = parse_header(buffer, SPACE);
+        free(buffer);
+
+        // Concatenate the relative_path with the given root
+        char* abs_path = concat(argv[2], relative_path);
+        free(relative_path);
 
     }
     
@@ -182,35 +199,49 @@ print_res(int sockfd, int response, int bytes) {
     }
 }
 
-// File Reading Function to parse the GET request
-int 
-parse_file(int sockfd, char* buffer) {
+/* File Reading function to parse the GET request
+ * ----------------------------------------------
+ * sockfd: The socket in which the file is being read from
+ * buffer: The string/array where the binary file is being read onto
+ *
+ * returns: The number of bytes the file contains (that was read into buffer)
+ */
+int
+read_file(int sockfd, char* buffer) {
     FILE *fp;
     unsigned long file_len;
 
     // Opening the binary file
-    fp = fopen(sockfd, 'r');
+    fp = fopen(sockfd, "r");
 
     if(!fp) {
-        perror("ERROR reading from socket");
+        perror("ERROR reading from file");
         exit(1);
     }
 
     // Get the file length
     fseek(fp, 0, SEEK_END);
-    file_len=ftell(fp);
+    file_len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    
+    // Copy file contents into buffer 
+    copy_to_buffer(fp, 0, buffer);
 
-    
+    // Close the file
+    fclose(fp);
+
+    return file_len;
 }
 
-// Copy the contents of the file into the buffer string
+/* Copy the contents of the file into the buffer string
+ * ----------------------------------------------------
+ * fp: Pointer to the file object to read from
+ * n : Iterator to make sure the buffer is appended to correctly
+ * buffer: The char array to copy the binary file into respective string onto
+ */ 
 void
 copy_to_buffer(FILE *fp, int *n, char* buffer) {
     int c;
-    int lines=0;
 
     // While end of file not reached
     while((c = getc(fp)) != EOF) {
@@ -219,3 +250,43 @@ copy_to_buffer(FILE *fp, int *n, char* buffer) {
     }
     return;
 }
+
+/* Parses the read buffer for the URI of the file requested
+ * ---------------------------------------------------------
+ * buffer: String/array for the request header to be stored
+ * space: The space character in the header
+ * 
+ * returns: The URI of the file requested as a string
+ */
+char* 
+parse_header(const char *str, const char *space) {
+    // Find the pointer to the first space character after request method.
+    const char *req_md = strstr(str, space);
+
+    if(req_md != NULL) {
+        // Find the pointer to the next space character before the HTTP type.
+        const char *http_type = strstr(req_md + 1, space);
+
+        if(http_type != NULL) {
+            // Use both pointers to extract the path out.
+            const size_t path_len = http_type - (req_md + 1);
+            // Allocate Memory to the path string being sliced out.
+            char *path = (char*)malloc((path_len + 1) * sizeof(char));
+
+            // Slice the path from the header and copy into the new path string.
+            if(path != NULL) {
+                memcpy(path, req_md + 1, path_len);
+                path[path_len] = '\0';
+                return path;
+            }
+        }
+    }
+
+    // If path not returned, handle errors.
+    perror("ERROR extracting from header");
+    exit(1);
+
+    return NULL;
+}
+
+
