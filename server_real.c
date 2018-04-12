@@ -17,7 +17,7 @@
 
 // Constant Declarations and Initialisation
 #define BUFFERSIZE 8192
-#define SPACE "%20"
+#define SPACE " "
 
 // Resquest Reponses
 char* const res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
@@ -42,8 +42,13 @@ main(int argc, char *argv[])
 {   
     // Declaring the sockets file descriptions and the port number.
     int sockfd, newsockfd, portno;// clilen;
+
     // Char array used as a string buffer.
     char* buffer;
+
+    // Array used for header buffer
+    char* header_buffer[BUFFERSIZE]
+
     // Declaring the string later used to assign to the root directory.
     char* root;
     
@@ -125,11 +130,11 @@ main(int argc, char *argv[])
             exit(1);
         }    
 
-        // Allocate Space to the buffer
-        memset(&buffer, '0', BUFFERSIZE);
+        // Allocate Space to the buffer for the header
+        memset(&header_buffer, '0', BUFFERSIZE-1);
 
         // Read characters from the socket and then process them
-        int n = read_file(newsockfd, buffer);
+        int n = read_file(newsockfd, header_buffer);
 
         // Error Handling if error from reading to socket
         if(n < 0) {
@@ -137,14 +142,18 @@ main(int argc, char *argv[])
         exit(1);
         }
 
+
         // Parse the header in the buffer and extract the path
-        char* relative_path = parse_header(buffer, SPACE);
-        free(buffer);
+        char* relative_path = parse_header(header_buffer, SPACE);
+        // Free the header char buffer used
+        free(header_buffer);
+        
 
         // Concatenate the relative_path with the given root
         char* abs_path = concat(argv[2], relative_path);
         free(relative_path);
 
+        // Free abs_path somewhere
     }
     
     
@@ -166,7 +175,7 @@ char*
 concat(char* s1, char* s2) {   
     // Determine the length of the output and allocating memory for it
     int output_len = strlen(s1) + strlen(s2) + 1;
-    char* concat_str = (char*)malloc(output_len * sizeof(char));
+    char* concat_str = malloc(output_len * sizeof(char));
 
     // Copy the first string into the allocated return string
     strcpy(concat_str, s1);
