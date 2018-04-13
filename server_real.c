@@ -131,10 +131,10 @@ main(int argc, char *argv[])
         }    
 
         // Allocate Space to the buffer for the header
-        memset(&header_buffer, '0', BUFFERSIZE-1);
+        memset(&header_buffer, '0', BUFFERSIZE);
 
         // Read characters from the socket and then process them
-        int n = read_file(newsockfd, header_buffer);
+        int n = read(newsockfd, header_buffer, BUFFERSIZE-1);
 
         // Error Handling if error from reading to socket
         if(n < 0) {
@@ -154,6 +154,10 @@ main(int argc, char *argv[])
         free(relative_path);
 
         // Free abs_path somewhere
+
+
+        // Open the file located at the abs_path
+
     }
     
     
@@ -216,12 +220,13 @@ print_res(int sockfd, int response, int bytes) {
  * returns: The number of bytes the file contains (that was read into buffer)
  */
 int
-read_file(int sockfd, char* buffer) {
+read_file(char* path) {
     FILE *fp;
     unsigned long file_len;
+    char* buffer;
 
     // Opening the binary file
-    fp = fopen(sockfd, "r");
+    fp = fopen(path, "r");
 
     if(!fp) {
         perror("ERROR reading from file");
@@ -232,6 +237,9 @@ read_file(int sockfd, char* buffer) {
     fseek(fp, 0, SEEK_END);
     file_len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
+
+    // Allocate memory to the buffer
+    buffer = malloc(file_len * sizeof(char));
 
     // Copy file contents into buffer 
     copy_to_buffer(fp, 0, buffer);
@@ -298,4 +306,58 @@ parse_header(const char *str, const char *space) {
     return NULL;
 }
 
+/* Find the extension and store there aside
+ * ------------------------------------------
+ * str: The request header parsed and with only abs_path
+ * return: The extension string
+ */
+char*
+find_extension(char* str) {
+    const char dot = '.';
+    char* ext;
+    //int ext_len;
 
+    // Get extension using strrchar
+    ext = strrchr(str, dot);
+    
+    // Return the extension as string
+    return ext;   
+}
+
+
+/* Match the extension to the respective response type
+ * ---------------------------------------------------
+ * ext: constant string of the file extension
+ * return: the string value of the media type ready to be appended
+ */
+char*
+match_ext(const char* ext) {
+
+    // Defining the matched media type string
+    char* media;
+
+    // Match the inputs to the respective extensions
+    switch(ext) {
+        // HTML File
+        case ".html":
+        media = "text/html";
+        break;
+
+        // JPEG Image File
+        case ".jpg":
+        media = "image/jpeg";
+        break;
+
+        // CSS Text File
+        case ".css":
+        media = "text/css"
+        break;
+
+        // Javascript Text File
+        case ".js":
+        media = "text/javascript";
+        break;
+    }
+
+    return media;
+}
