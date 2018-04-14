@@ -18,18 +18,36 @@
 // Constant Declarations and Initialisation
 #define BUFFERSIZE 8192
 #define SPACE " "
+#define MEDIA_NUM 4
 
 // Resquest Reponses
-char* const res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
-char* const res404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: %s\r\n\r\n";
+const char* res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
+const char* res404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: %s\r\n\r\n";
+
+// Struct Definition
+typedef struct {
+    char* buff_str;
+    unsigned long buff_len;
+} buffer_info;
+
+typedef struct {
+    const char *ext;
+    const char *mime;
+} media_t;
+
+// Global Constants
+const media_t medias[] = {{".html","text/html"}, {".jpeg", "image/jpeg"},
+                         {".css", "text/css"}, {".js", "text/javascript"}};
 
 
 // Function Declarations 
 char* concat(char* s1, char* s2);
 void print_res(int sockfd, int response, int bytes);
-int read_file(int sockfd, char* buffer);
+void read_file(char* path, buffer_info* bf);
 void copy_to_buffer(FILE *fp, int *n, char* buffer);
 char* parse_header(const char *str, const char *space);
+char* find_extension(char* str);
+char* match_ext(const char* ext);
 
 //--------------------------------------------------------------------------------------------------
 /* Main Functions
@@ -47,7 +65,7 @@ main(int argc, char *argv[])
     char* buffer;
 
     // Array used for header buffer
-    char* header_buffer[BUFFERSIZE]
+    char* header_buffer[BUFFERSIZE];
 
     // Declaring the string later used to assign to the root directory.
     char* root;
@@ -131,7 +149,7 @@ main(int argc, char *argv[])
         }    
 
         // Allocate Space to the buffer for the header
-        memset(&header_buffer, '0', BUFFERSIZE);
+        memset(header_buffer, '0', (BUFFERSIZE*sizeof(char)));
 
         // Read characters from the socket and then process them
         int n = read(newsockfd, header_buffer, BUFFERSIZE-1);
@@ -155,8 +173,15 @@ main(int argc, char *argv[])
 
         // Free abs_path somewhere
 
-
+        // Create a buffer info struct and default the length to 0
+        buffer_info bf;
+        bf.buff_len = 0;
+        
         // Open the file located at the abs_path
+        read_file(abs_path,&bf);
+
+
+
 
     }
     
@@ -219,8 +244,8 @@ print_res(int sockfd, int response, int bytes) {
  *
  * returns: The number of bytes the file contains (that was read into buffer)
  */
-int
-read_file(char* path) {
+void
+read_file(char* path, buffer_info* bf) {
     FILE *fp;
     unsigned long file_len;
     char* buffer;
@@ -247,7 +272,8 @@ read_file(char* path) {
     // Close the file
     fclose(fp);
 
-    return file_len;
+    bf->buff_str = buffer;
+    bf->buff_len = file_len;
 }
 
 /* Copy the contents of the file into the buffer string
@@ -334,30 +360,15 @@ char*
 match_ext(const char* ext) {
 
     // Defining the matched media type string
-    char* media;
+    //char* media;
+    int i;
 
-    // Match the inputs to the respective extensions
-    switch(ext) {
-        // HTML File
-        case ".html":
-        media = "text/html";
-        break;
-
-        // JPEG Image File
-        case ".jpg":
-        media = "image/jpeg";
-        break;
-
-        // CSS Text File
-        case ".css":
-        media = "text/css"
-        break;
-
-        // Javascript Text File
-        case ".js":
-        media = "text/javascript";
-        break;
+    for(i=0;i<MEDIA_NUM;i++) {
+        if(!(strcmp(medias[i].ext, ext))) {
+            return medias[i].mime;
+        }
     }
 
-    return media;
+    return NULL;
 }
+
