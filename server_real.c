@@ -65,7 +65,7 @@ main(int argc, char *argv[])
     char* buffer;
 
     // Array used for header buffer
-    char* header_buffer[BUFFERSIZE];
+    char* header_buffer;
 
     // Declaring the string later used to assign to the root directory.
     char* root;
@@ -199,26 +199,32 @@ main(int argc, char *argv[])
  *
  */
 
-// Concatenate function to appending one string to another
+// Concatenate function to appending one string to another.
 char*
 concat(char* s1, char* s2) {   
-    // Determine the length of the output and allocating memory for it
+    // Determine the length of the output and allocating memory for it.
     int output_len = strlen(s1) + strlen(s2) + 1;
     char* concat_str = malloc(output_len * sizeof(char));
 
-    // Copy the first string into the allocated return string
+    // Copy the first string into the allocated return string.
     strcpy(concat_str, s1);
-    // Concat the second on onto the allocated return string afterwards
+    // Concat the second on onto the allocated return string afterwards.
     strcat(concat_str, s2);
 
     return concat_str;
 }
 
 // Print function to output the response that the server would give
+/* Write the response to the socket
+ * --------------------------------
+ * sockfd: The new socket file descriptor passed in for every resquest
+ * response: The response type the response should take depending on the file
+ * bytes: The length of the file written in bytes
+ */
 void 
 print_res(int sockfd, int response, int bytes) {
-    int n;
-    // Check the type of response coming in
+    int n = 0;
+    // Check the type of response coming in.
 
     switch(response) {
         case 200:
@@ -228,9 +234,13 @@ print_res(int sockfd, int response, int bytes) {
         case 404:
         write(sockfd,res404,bytes);
         break;
+
+        default:
+        n--;
+        break;
     }
 
-    // Break the program if there are errors writing
+    // Break the program if there are errors writing.
     if (n < 0) {
         perror("ERROR writing to socket");
         exit(1);
@@ -239,10 +249,10 @@ print_res(int sockfd, int response, int bytes) {
 
 /* File Reading function to parse the GET request
  * ----------------------------------------------
- * sockfd: The socket in which the file is being read from
- * buffer: The string/array where the binary file is being read onto
+ * sockfd: The socket in which the file is being read from.
+ * buffer: The string/array where the binary file is being read onto.
  *
- * returns: The number of bytes the file contains (that was read into buffer)
+ * return: The number of bytes the file contains (that was read into buffer).
  */
 void
 read_file(char* path, buffer_info* bf) {
@@ -250,7 +260,7 @@ read_file(char* path, buffer_info* bf) {
     unsigned long file_len;
     char* buffer;
 
-    // Opening the binary file
+    // Opening the binary file.
     fp = fopen(path, "r");
 
     if(!fp) {
@@ -258,18 +268,18 @@ read_file(char* path, buffer_info* bf) {
         exit(1);
     }
 
-    // Get the file length
+    // Get the file length.
     fseek(fp, 0, SEEK_END);
     file_len = ftell(fp);
     fseek(fp, 0, SEEK_SET);
 
-    // Allocate memory to the buffer
+    // Allocate memory to the buffer.
     buffer = malloc(file_len * sizeof(char));
 
-    // Copy file contents into buffer 
+    // Copy file contents into buffer.
     copy_to_buffer(fp, 0, buffer);
 
-    // Close the file
+    // Close the file.
     fclose(fp);
 
     bf->buff_str = buffer;
@@ -278,17 +288,17 @@ read_file(char* path, buffer_info* bf) {
 
 /* Copy the contents of the file into the buffer string
  * ----------------------------------------------------
- * fp: Pointer to the file object to read from
- * n : Iterator to make sure the buffer is appended to correctly
- * buffer: The char array to copy the binary file into respective string onto
+ * fp: Pointer to the file object to read from.
+ * n : Iterator to make sure the buffer is appended to correctly.
+ * buffer: The char array to copy the binary file into respective string onto.
  */ 
 void
 copy_to_buffer(FILE *fp, int *n, char* buffer) {
     int c;
 
-    // While end of file not reached
+    // While end of file not reached.
     while((c = getc(fp)) != EOF) {
-        // Copies each character into the buffer
+        // Copies each character into the buffer.
         buffer[*n++] = c; 
     }
     return;
@@ -296,10 +306,10 @@ copy_to_buffer(FILE *fp, int *n, char* buffer) {
 
 /* Parses the read buffer for the URI of the file requested
  * ---------------------------------------------------------
- * buffer: String/array for the request header to be stored
- * space: The space character in the header
- * 
- * returns: The URI of the file requested as a string
+ * buffer: String/array for the request header to be stored.
+ * space: The space character in the header.
+ *
+ * returns: The URI of the file requested as a string.
  */
 char* 
 parse_header(const char *str, const char *space) {
@@ -334,8 +344,9 @@ parse_header(const char *str, const char *space) {
 
 /* Find the extension and store there aside
  * ------------------------------------------
- * str: The request header parsed and with only abs_path
- * return: The extension string
+ * str: The request header parsed and with only abs_path.
+ *
+ * return: The extension string.
  */
 char*
 find_extension(char* str) {
@@ -343,32 +354,38 @@ find_extension(char* str) {
     char* ext;
     //int ext_len;
 
-    // Get extension using strrchar
+    // Get extension using strrchar.
     ext = strrchr(str, dot);
     
-    // Return the extension as string
+    // Return the extension as string.
     return ext;   
 }
 
 
 /* Match the extension to the respective response type
  * ---------------------------------------------------
- * ext: constant string of the file extension
- * return: the string value of the media type ready to be appended
+ * ext: constant string of the file extension.
+ *
+ * return: the string value of the media type ready to be appended.
  */
 char*
 match_ext(const char* ext) {
 
-    // Defining the matched media type string
-    //char* media;
+    // Defining the matched media type string.
+    char* media = "\0";
     int i;
 
+    // Loop through possible media types and return the right one.
     for(i=0;i<MEDIA_NUM;i++) {
+
+        // If the string extension matches one of the possibilities.
         if(!(strcmp(medias[i].ext, ext))) {
-            return medias[i].mime;
+            strcpy(media, medias[i].mime);
+            return media;
         }
     }
 
+    // I know I shouldn't be returning null but...
     return NULL;
 }
 
