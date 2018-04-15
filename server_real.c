@@ -48,6 +48,7 @@ void copy_to_buffer(FILE *fp, int *n, char* buffer);
 char* parse_header(const char *str, const char *space);
 char* find_extension(char* str);
 char* match_ext(const char* ext);
+int check_file_exist(char* path);
 
 //--------------------------------------------------------------------------------------------------
 /* Main Functions
@@ -61,14 +62,10 @@ main(int argc, char *argv[])
     // Declaring the sockets file descriptions and the port number.
     int sockfd, newsockfd, portno;// clilen;
 
-    // Char array used as a string buffer.
-    char* buffer;
 
     // Array used for header buffer
     char* header_buffer;
 
-    // Declaring the string later used to assign to the root directory.
-    char* root;
     
 
     // Structs for server and client address
@@ -199,7 +196,15 @@ main(int argc, char *argv[])
  *
  */
 
-// Concatenate function to appending one string to another.
+
+
+/* Concatenate function to appending one string to another 
+ * -------------------------------------------------------
+ * s1: First String to be at the front.
+ * s2: Second String to be at the back.
+ *
+ * return: Pointer to the concatenated string.
+ */
 char*
 concat(char* s1, char* s2) {   
     // Determine the length of the output and allocating memory for it.
@@ -214,8 +219,8 @@ concat(char* s1, char* s2) {
     return concat_str;
 }
 
-// Print function to output the response that the server would give
-/* Write the response to the socket
+
+/* Write the responses to the socket
  * --------------------------------
  * sockfd: The new socket file descriptor passed in for every resquest
  * response: The response type the response should take depending on the file
@@ -260,7 +265,7 @@ read_file(char* path, buffer_info* bf) {
     unsigned long file_len;
     char* buffer;
 
-    // Opening the binary file.
+    // Opening the file.
     fp = fopen(path, "r");
 
     if(!fp) {
@@ -389,3 +394,19 @@ match_ext(const char* ext) {
     return NULL;
 }
 
+
+/* Check if the file exists
+ * ------------------------
+ * path: The absolute path of the file passed as a string 
+ *
+ * return: The reponse code required to handle the file
+ */
+int 
+check_file_exist(char* path) {
+    // If file does not exists...
+    if(access(path, F_OK) < 0) {
+        return 404;
+    }
+    // If file does exists...
+    return 200;
+}
