@@ -1,7 +1,7 @@
-server_real: server_real.c
-	gcc -Wall -o server_real server_real.c
+server: server.c
+	gcc -Wall -o server server.c
 clean :
-	rm server_real
+	rm server
 
 scp: 
 	scp *.c *.h Makefile ubuntu@115.146.85.92: 
