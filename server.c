@@ -22,7 +22,7 @@
 
 // Resquest Reponses
 const char* res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
-const char* res404 = "HTTP/1.0 404 NOT FOUND\r\nContent-Type: %s\r\n\r\n";
+const char* res404 = "HTTP/1.0 404 Not Found\r\nContent-Type: %s\r\n\r\n";
 
 // Struct Definition
 typedef struct {
@@ -42,7 +42,7 @@ const media_t medias[] = {{".html","text/html"}, {".jpeg", "image/jpeg"},
 
 // Function Declarations 
 char* concat(char* s1, char* s2);
-void print_res(int sockfd, int response,char* file, int bytes, char* mimetype);
+void print_res(int sockfd, char* response,char* file, int bytes, char* mimetype);
 void read_file(char* path, buffer_info* bf);
 void copy_to_buffer(FILE *fp, int *n, char* buffer);
 char* parse_header(const char *str, const char *space);
@@ -136,7 +136,7 @@ main(int argc, char *argv[])
             
         // Array used for header buffer
         char* header_buffer;
-
+        char response_buffer[BUFFERSIZE];
         
         // Assigning a new socket to the accepted one
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
@@ -147,15 +147,16 @@ main(int argc, char *argv[])
         }    
 
         // Allocate Space to the buffer for the header
-        memset(&header_buffer, '0', (BUFFERSIZE*sizeof(char)));
+        // memset(&header_buffer, '0', (BUFFERSIZE*sizeof(char)));
+        header_buffer = malloc(sizeof(char) * BUFFERSIZE);
 
         // Read characters from the socket and then process them
         int n = read(newsockfd, header_buffer, BUFFERSIZE-1);
 
         // Error Handling if error from reading to socket
         if(n < 0) {
-        perror("ERROR reading from socket");
-        exit(1);
+            perror("ERROR reading from socket");
+            exit(1);
         }
 
 
@@ -168,6 +169,7 @@ main(int argc, char *argv[])
         // Concatenate the relative_path with the given root
         char* abs_path = concat(argv[2], relative_path);
         free(relative_path);
+        
 
         // Free abs_path somewhere
 
@@ -178,25 +180,42 @@ main(int argc, char *argv[])
         // Find the extension and its respective mime type
         char* ext = find_extension(abs_path);
         char* mimetype = match_ext(ext);
+        
+
+        // ---------------------------------------
+        /* Writing*/
+
+        /* Writing the response - parse the correct content type into
+         the respective response and write it into the socket. */
 
         // Check that the file exists first
-        if (check_file_exist(abs_path) == 200) {
+        int res_int = check_file_exist(abs_path);
+        if (res_int) {
+            // Handle the response header formatting
+            sprintf(response_buffer, res200, mimetype);
+            
 
             // Open the file located at the abs_path
             read_file(abs_path,&bf);    
-            print_res(newsockfd, 200, bf.buff_str, bf.buff_len, mimetype);        
+            print_res(newsockfd, (response_buffer), bf.buff_str, bf.buff_len, mimetype);  
+
+            // Free the buffer_info struct
+            free(bf.buff_str);
         }   
 
         // Print response if not found
         else {
-            print_res(newsockfd, 404, NULL, 0, mimetype);
+            // Handle the response header formatting.
+            sprintf(response_buffer, res404, mimetype);
+
+            // Write to socket.
+            print_res(newsockfd, (response_buffer), NULL, 0, mimetype);
         }
+
+        free(abs_path);
 
     }
     
-    
-
-
 
     // ---------------------------------------
     return 0;
@@ -240,30 +259,25 @@ concat(char* s1, char* s2) {
  * bytes: The length of the file written in bytes
  */
 void 
-print_res(int sockfd, int response,char* file , int bytes, char* mimetype) {
-    int n = 0;
+print_res(int sockfd, char* response, char* file , int bytes, char* mimetype) {
+    //printf("%d\n", sockfd);
+    //printf("%s\n", response);
+    //printf("%s\n", file);
+    //printf("%d\n", bytes);
+    //printf("%s\n", mimetype);
+
     // Check the type of response coming in.
-
-    switch(response) {
-        case 200:
-        write(sockfd,(res200, &mimetype),(strlen(res200) + strlen(mimetype)));
+    if(bytes) {
+        // If file found and is not empty.
+        write(sockfd, response, strlen(response));
         write(sockfd,file,bytes);
-        break;
-
-        case 404:
-        write(sockfd,(res404, &mimetype),(strlen(res404) + strlen(mimetype)));
-        break;
-
-        default:
-        n--;
-        break;
     }
 
-    // Break the program if there are errors writing.
-    if (n < 0) {
-        perror("ERROR writing response to socket");
-        exit(1);
+    else{
+        write(sockfd, response, strlen(response));
     }
+
+    close(sockfd);
 }
 
 /* File Reading function to parse the GET request
@@ -282,6 +296,7 @@ read_file(char* path, buffer_info* bf) {
     // Opening the file.
     fp = fopen(path, "r");
 
+    // Handle Errors 
     if(!fp) {
         perror("ERROR reading from file");
         exit(1);
@@ -295,8 +310,21 @@ read_file(char* path, buffer_info* bf) {
     // Allocate memory to the buffer.
     buffer = malloc(file_len * sizeof(char));
 
+
+    int n = 0;
     // Copy file contents into buffer.
-    copy_to_buffer(fp, 0, buffer);
+    int c;
+
+    // While end of file not reached.
+    while((c = getc(fp)) != EOF) {
+        //printf("%c",c);
+        //fflush(stdout);
+        // Copies each character into the buffer.
+        buffer[n++] = c; 
+
+    }
+
+    //copy_to_buffer(fp, &n, buffer);
 
     // Close the file.
     fclose(fp);
@@ -313,14 +341,8 @@ read_file(char* path, buffer_info* bf) {
  */ 
 void
 copy_to_buffer(FILE *fp, int *n, char* buffer) {
-    int c;
 
-    // While end of file not reached.
-    while((c = getc(fp)) != EOF) {
-        // Copies each character into the buffer.
-        buffer[*n++] = c; 
-    }
-    return;
+   
 }
 
 /* Parses the read buffer for the URI of the file requested
@@ -391,7 +413,7 @@ char*
 match_ext(const char* ext) {
 
     // Defining the matched media type string.
-    char* media = "\0";
+    char* media = malloc(sizeof(char) * 256);
     int i;
 
     // Loop through possible media types and return the right one.
@@ -419,8 +441,8 @@ int
 check_file_exist(char* path) {
     // If file does not exists...
     if(access(path, F_OK) < 0) {
-        return 404;
+        return 0;
     }
     // If file does exists...
-    return 200;
+    return 1;
 }

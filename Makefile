@@ -4,4 +4,4 @@ clean :
 	rm server
 
 scp: 
-	scp *.c *.h Makefile ubuntu@115.146.85.92: 
+	scp *.c Makefile ubuntu@115.146.85.92: 
