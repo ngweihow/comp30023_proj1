@@ -36,7 +36,7 @@ typedef struct {
 } media_t;
 
 // Global Constants
-const media_t medias[] = {{".html","text/html"}, {".jpeg", "image/jpeg"},
+const media_t medias[] = {{".html","text/html"}, {".jpg", "image/jpeg"},
                          {".css", "text/css"}, {".js", "text/javascript"}};
 
 
@@ -309,9 +309,15 @@ read_file(char* path, buffer_info* bf) {
 
     // Allocate memory to the buffer.
     buffer = malloc(file_len * sizeof(char));
+    memset(buffer, '\0', file_len);
 
+    /* Using fread */
+    fread(buffer, 1, file_len, fp);
 
+    /* Using Manual Reading */
+    /*
     int n = 0;
+
     // Copy file contents into buffer.
     int c;
 
@@ -324,6 +330,7 @@ read_file(char* path, buffer_info* bf) {
 
     }
 
+    */
     //copy_to_buffer(fp, &n, buffer);
 
     // Close the file.
