@@ -24,16 +24,27 @@
 const char* res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
 const char* res404 = "HTTP/1.0 404 Not Found\r\nContent-Type: %s\r\n\r\n";
 
+// -------------------
 // Struct Definition
+// Struct for storing buffer and it's length
 typedef struct {
     char* buff_str;
     unsigned long buff_len;
 } buffer_info;
 
+// Struct for matching extension against mimetypes
 typedef struct {
     const char *ext;
     const char *mime;
 } media_t;
+
+// Struct for storing thread arguments
+typedef struct {
+    int sockfd;
+    char* root_path;
+} thread_arg_t;
+
+
 
 // Global Constants
 const media_t medias[] = {{".html","text/html"}, {".jpg", "image/jpeg"},
@@ -142,6 +153,12 @@ main(int argc, char *argv[])
             exit(1);
         }    
 
+        // Parsing newsockfd and the root directory into a thread_arg_t struct
+        thread_arg_t thread_arg;
+        thread_arg.sockfd = newsockfd;
+        thread_arg.root_path = argv[2];
+
+        thread_activity(&thread_arg);
         // Create pthread **HERE**
         /*
         pthread_t tid;
@@ -149,83 +166,12 @@ main(int argc, char *argv[])
         pthread_attr_t attr;
         pthread_attr_init(&attr);
 
-        pthread_create(&tid, &attr, )
+        pthread_create(&tid, &attr, thread_activity, &thread_arg);
             
         */
 
 
-        // Array used for header buffer
-        char* header_buffer;
-        char response_buffer[BUFFERSIZE];
-
-        // Allocate Space to the buffer for the header
-        // memset(&header_buffer, '0', (BUFFERSIZE*sizeof(char)));
-        header_buffer = malloc(sizeof(char) * BUFFERSIZE);
-
-        // Read characters from the socket and then process them
-        int n = read(newsockfd, header_buffer, BUFFERSIZE-1);
-
-        // Error Handling if error from reading to socket
-        if(n < 0) {
-            perror("ERROR reading from socket");
-            exit(1);
-        }
-
-
-        // Parse the header in the buffer and extract the path
-        char* relative_path = parse_header(header_buffer, SPACE);
-        // Free the header char buffer used
-        free(header_buffer);
         
-
-        // Concatenate the relative_path with the given root
-        char* abs_path = concat(argv[2], relative_path);
-        free(relative_path);
-        
-
-        // Free abs_path somewhere
-
-        // Create a buffer info struct and default the length to 0
-        buffer_info bf;
-        bf.buff_len = 0;
-        
-        // Find the extension and its respective mime type
-        char* ext = find_extension(abs_path);
-        char* mimetype = match_ext(ext);
-        
-
-        // ---------------------------------------
-        /* Writing*/
-
-        /* Writing the response - parse the correct content type into
-         the respective response and write it into the socket. */
-
-        // Check that the file exists first
-        int res_int = check_file_exist(abs_path);
-        if (res_int) {
-            // Handle the response header formatting
-            sprintf(response_buffer, res200, mimetype);
-            
-
-            // Open the file located at the abs_path
-            read_file(abs_path,&bf);    
-            print_res(newsockfd, (response_buffer), bf.buff_str, bf.buff_len, mimetype);  
-
-            // Free the buffer_info struct
-            free(bf.buff_str);
-        }   
-
-        // Print response if not found
-        else {
-            // Handle the response header formatting.
-            sprintf(response_buffer, res404, mimetype);
-
-            // Write to socket.
-            print_res(newsockfd, (response_buffer), NULL, 0, mimetype);
-        }
-
-        free(abs_path);
-
 
         // Detach pthread **HERE**
     }
@@ -241,16 +187,91 @@ main(int argc, char *argv[])
  * Handles the activities each thread executes
  */
 
-void* thread_activity(void* arg) {
+void* thread_activity(void* thread_arg) {
 
     /* Handle formatting of the void argument
        struct into normal arguments*/
-    /*
-    int* newsockfd_ptr = (int*) arg;
-    int newsockfd = *newsockfd_ptr;
-    */
+    
+    thread_arg_t* thread_arg_ptr = (thread_arg_t*) thread_arg;
+    int newsockfd = thread_arg_ptr->sockfd;
+    char* root = thread_arg_ptr->root_path;
+    
     // --------------
     // Processes start here
+
+    // Array used for header buffer
+    char* header_buffer;
+    char response_buffer[BUFFERSIZE];
+
+    // Allocate Space to the buffer for the header
+    // memset(&header_buffer, '0', (BUFFERSIZE*sizeof(char)));
+    header_buffer = malloc(sizeof(char) * BUFFERSIZE);
+
+    // Read characters from the socket and then process them
+    int n = read(newsockfd, header_buffer, BUFFERSIZE-1);
+
+    // Error Handling if error from reading to socket
+    if(n < 0) {
+        perror("ERROR reading from socket");
+        exit(1);
+    }
+
+
+    // Parse the header in the buffer and extract the path
+    char* relative_path = parse_header(header_buffer, SPACE);
+    // Free the header char buffer used
+    free(header_buffer);
+    
+
+    // Concatenate the relative_path with the given root
+    char* abs_path = concat(root, relative_path);
+    free(relative_path);
+    
+
+    // Free abs_path somewhere
+
+    // Create a buffer info struct and default the length to 0
+    buffer_info bf;
+    bf.buff_len = 0;
+    
+    // Find the extension and its respective mime type
+    char* ext = find_extension(abs_path);
+    char* mimetype = match_ext(ext);
+    
+
+    // ---------------------------------------
+    /* Writing*/
+
+    /* Writing the response - parse the correct content type into
+     the respective response and write it into the socket. */
+
+    // Check that the file exists first
+    int res_int = check_file_exist(abs_path);
+    if (res_int) {
+        // Handle the response header formatting
+        sprintf(response_buffer, res200, mimetype);
+        
+
+        // Open the file located at the abs_path
+        read_file(abs_path,&bf);    
+        print_res(newsockfd, (response_buffer), bf.buff_str, bf.buff_len, mimetype);  
+
+        // Free the buffer_info struct
+        free(bf.buff_str);
+    }   
+
+    // Print response if not found
+    else {
+        // Handle the response header formatting.
+        sprintf(response_buffer, res404, mimetype);
+
+        // Write to socket.
+        print_res(newsockfd, (response_buffer), NULL, 0, mimetype);
+    }
+
+    free(abs_path);
+
+
 
     return NULL;
 
