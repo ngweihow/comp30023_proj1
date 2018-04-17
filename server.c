@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <pthread.h>
 
 // Constant Declarations and Initialisation
 #define BUFFERSIZE 8192
@@ -158,22 +159,28 @@ main(int argc, char *argv[])
         thread_arg.sockfd = newsockfd;
         thread_arg.root_path = argv[2];
 
-        thread_activity(&thread_arg);
         // Create pthread **HERE**
-        /*
+        
         pthread_t tid;
-
         pthread_attr_t attr;
         pthread_attr_init(&attr);
 
-        pthread_create(&tid, &attr, thread_activity, &thread_arg);
-            
-        */
-
-
+        int error_c = pthread_create(&tid, &attr,
+                                     thread_activity,
+                                     &thread_arg);
+        if(error_c) {
+            perror("ERROR on creating thread");
+            exit(1);
+        }
         
+        //thread_activity(&thread_arg);
 
         // Detach pthread **HERE**
+        int error_d = pthread_detach(tid);
+        if(error_d) {
+            perror("ERROR on detaching thread");
+            exit(1);
+        }
     }
     
 
