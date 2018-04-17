@@ -41,6 +41,7 @@ const media_t medias[] = {{".html","text/html"}, {".jpg", "image/jpeg"},
 
 
 // Function Declarations 
+void* thread_activity(void* arg);                         
 char* concat(char* s1, char* s2);
 void print_res(int sockfd, char* response,char* file, int bytes, char* mimetype);
 void read_file(char* path, buffer_info* bf);
@@ -61,7 +62,6 @@ main(int argc, char *argv[])
 {   
     // Declaring the sockets file descriptions and the port number.
     int sockfd, newsockfd, portno;// clilen;
-
 
     
     // Structs for server and client address
@@ -133,10 +133,6 @@ main(int argc, char *argv[])
 
     // Loop forever if there are requests coming from the socket
     while(1) {
-            
-        // Array used for header buffer
-        char* header_buffer;
-        char response_buffer[BUFFERSIZE];
         
         // Assigning a new socket to the accepted one
         newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
@@ -145,6 +141,22 @@ main(int argc, char *argv[])
             perror("ERROR on accept");
             exit(1);
         }    
+
+        // Create pthread **HERE**
+        /*
+        pthread_t tid;
+
+        pthread_attr_t attr;
+        pthread_attr_init(&attr);
+
+        pthread_create(&tid, &attr, )
+            
+        */
+
+
+        // Array used for header buffer
+        char* header_buffer;
+        char response_buffer[BUFFERSIZE];
 
         // Allocate Space to the buffer for the header
         // memset(&header_buffer, '0', (BUFFERSIZE*sizeof(char)));
@@ -214,11 +226,34 @@ main(int argc, char *argv[])
 
         free(abs_path);
 
+
+        // Detach pthread **HERE**
     }
     
 
     // ---------------------------------------
     return 0;
+}
+
+//--------------------------------------------------------------------------------------------------
+/* Void Pointer Function 
+ * ---------------------
+ * Handles the activities each thread executes
+ */
+
+void* thread_activity(void* arg) {
+
+    /* Handle formatting of the void argument
+       struct into normal arguments*/
+    /*
+    int* newsockfd_ptr = (int*) arg;
+    int newsockfd = *newsockfd_ptr;
+    */
+    // --------------
+    // Processes start here
+
+    return NULL;
+
 }
 
 
