@@ -181,6 +181,8 @@ main(int argc, char *argv[])
             perror("ERROR on detaching thread");
             exit(1);
         }
+
+        free(thread_arg.root_path);
     }
     
 
@@ -235,7 +237,6 @@ void* thread_activity(void* thread_arg) {
     free(relative_path);
     
 
-    // Free abs_path somewhere
 
     // Create a buffer info struct and default the length to 0
     buffer_info bf;
@@ -276,7 +277,16 @@ void* thread_activity(void* thread_arg) {
         print_res(newsockfd, (response_buffer), NULL, 0, mimetype);
     }
 
+
+    // Free abs_path 
     free(abs_path);
+
+    // Free mimetype
+    if (mimetype != NULL) {
+        free(mimetype);    
+    }
+
+    // Free 
 
 
 
