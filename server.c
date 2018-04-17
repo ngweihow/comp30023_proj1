@@ -182,7 +182,7 @@ main(int argc, char *argv[])
             exit(1);
         }
 
-        free(thread_arg.root_path);
+        //free(thread_arg.root_path);
     }
     
 
