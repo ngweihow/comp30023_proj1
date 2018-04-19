@@ -1,10 +1,13 @@
-/**
- * Project Code for Computer Systems COMP30023 2018 S1
- * A simple HTML 1.0 Web Server which handles basic GET requests 
- * To compile: Run the Makefile with "make" OR
- *             gcc -o server_real server_real.c
- * Written by: 828472
+/*   Main Server File
+     +------------------------------------------------------------------+
+     | Project Code for Computer Systems COMP30023 2018 S1              |
+     | A simple HTML 1.0 Web Server which handles basic GET requests    |
+     | To compile: Run the Makefile with "make"                         |
+     | Written by: Wei How Ng (828472) wein4                            |
+     +------------------------------------------------------------------+
+
  */
+
 
 // Library and header includes
 #include <stdio.h>
@@ -16,10 +19,13 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+// Importing header files
+#include "parse.h"
+#include "read.h"
+
 // Constant Declarations and Initialisation
 #define BUFFERSIZE 8192
 #define SPACE " "
-#define MEDIA_NUM 4
 
 // Resquest Reponses
 const char* res200 = "HTTP/1.0 200 OK\r\nContent-Type: %s\r\n\r\n";
@@ -27,17 +33,6 @@ const char* res404 = "HTTP/1.0 404 Not Found\r\nContent-Type: %s\r\n\r\n";
 
 // -------------------
 // Struct Definition
-// Struct for storing buffer and it's length
-typedef struct {
-    char* buff_str;
-    unsigned long buff_len;
-} buffer_info;
-
-// Struct for matching extension against mimetypes
-typedef struct {
-    const char *ext;
-    const char *mime;
-} media_t;
 
 // Struct for storing thread arguments
 typedef struct {
@@ -45,22 +40,11 @@ typedef struct {
     char* root_path;
 } thread_arg_t;
 
-
-
-// Global Constants
-const media_t medias[] = {{".html","text/html"}, {".jpg", "image/jpeg"},
-                         {".css", "text/css"}, {".js", "text/javascript"}};
-
-
+// -------------------
 // Function Declarations 
 void* thread_activity(void* arg);                         
-char* concat(char* s1, char* s2);
 void print_res(int sockfd, char* response,char* file, int bytes, char* mimetype);
-void read_file(char* path, buffer_info* bf);
-char* parse_header(const char *str, const char *space);
-char* find_extension(char* str);
-char* match_ext(const char* ext);
-int check_file_exist(char* path);
+
 
 //--------------------------------------------------------------------------------------------------
 /* Main Functions
@@ -86,11 +70,9 @@ main(int argc, char *argv[])
         exit(1);
     }
 
-
     // Saving the Port Number as an int
     portno = atoi(argv[1]);
-    // Copy and then concatenating the root path with the one from the request
-
+    
 
     // ---------------------------------------
     /* Creating TCP Socket*/
@@ -171,6 +153,7 @@ main(int argc, char *argv[])
             perror("ERROR on creating thread");
             exit(1);
         }
+        
 
         // Detach pthread **HERE**
         int error_d = pthread_detach(tid);
@@ -280,8 +263,6 @@ void* thread_activity(void* thread_arg) {
         free(mimetype);    
     }
 
-    // Free 
-
     return NULL;
 
 }
@@ -291,29 +272,6 @@ void* thread_activity(void* thread_arg) {
 /* Helper Functions
  *
  */
-
-
-/* Concatenate function to appending one string to another 
- * -------------------------------------------------------
- * s1: First String to be at the front.
- * s2: Second String to be at the back.
- *
- * return: Pointer to the concatenated string.
- */
-char*
-concat(char* s1, char* s2) {   
-    // Determine the length of the output and allocating memory for it.
-    int output_len = strlen(s1) + strlen(s2) + 1;
-    char* concat_str = malloc(output_len * sizeof(char));
-
-    // Copy the first string into the allocated return string.
-    strcpy(concat_str, s1);
-    // Concat the second on onto the allocated return string afterwards.
-    strcat(concat_str, s2);
-
-    return concat_str;
-}
-
 
 /* Write the responses to the socket
  * --------------------------------
@@ -332,6 +290,7 @@ print_res(int sockfd, char* response, char* file , int bytes, char* mimetype) {
         write(sockfd,file,bytes);
     }
 
+    // If file was not found, just write response
     else{
         write(sockfd, response, strlen(response));
     }
@@ -339,147 +298,3 @@ print_res(int sockfd, char* response, char* file , int bytes, char* mimetype) {
     close(sockfd);
 }
 
-/* File Reading function to parse the GET request
- * ----------------------------------------------
- * sockfd: The socket in which the file is being read from.
- * buffer: The string/array where the binary file is being read onto.
- *
- * return: The number of bytes the file contains (that was read into buffer).
- */
-void
-read_file(char* path, buffer_info* bf) {
-    FILE *fp;
-    unsigned long file_len;
-    char* buffer;
-
-    // Opening the file.
-    fp = fopen(path, "r");
-
-    // Handle Errors 
-    if(!fp) {
-        perror("ERROR reading from file");
-        exit(1);
-    }
-
-    // Get the file length.
-    fseek(fp, 0, SEEK_END);
-    file_len = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
-    // Allocate memory to the buffer.
-    buffer = malloc(file_len * sizeof(char));
-    memset(buffer, '\0', file_len);
-
-    /* Using fread */
-    fread(buffer, 1, file_len, fp);
-
-    // Close the file.
-    fclose(fp);
-
-    bf->buff_str = buffer;
-    bf->buff_len = file_len;
-}
-
-
-
-/* Parses the read buffer for the URI of the file requested
- * ---------------------------------------------------------
- * buffer: String/array for the request header to be stored.
- * space: The space character in the header.
- *
- * returns: The URI of the file requested as a string.
- */
-char* 
-parse_header(const char *str, const char *space) {
-    // Find the pointer to the first space character after request method.
-    const char *req_md = strstr(str, space);
-
-    if(req_md != NULL) {
-        // Find the pointer to the next space character before the HTTP type.
-        const char *http_type = strstr(req_md + 1, space);
-
-        if(http_type != NULL) {
-            // Use both pointers to extract the path out.
-            const size_t path_len = http_type - (req_md + 1);
-            // Allocate Memory to the path string being sliced out.
-            char *path = (char*)malloc((path_len + 1) * sizeof(char));
-
-            // Slice the path from the header and copy into the new path string.
-            if(path != NULL) {
-                memcpy(path, req_md + 1, path_len);
-                path[path_len] = '\0';
-                return path;
-            }
-        }
-    }
-
-    // If path not returned, handle errors.
-    perror("ERROR extracting from header");
-    exit(1);
-
-    return NULL;
-}
-
-/* Find the extension and store there aside
- * ------------------------------------------
- * str: The request header parsed and with only abs_path.
- *
- * return: The extension string.
- */
-char*
-find_extension(char* str) {
-    const char dot = '.';
-    char* ext;
-    //int ext_len;
-
-    // Get extension using strrchar.
-    ext = strrchr(str, dot);
-    
-    // Return the extension as string.
-    return ext;   
-}
-
-
-/* Match the extension to the respective response type
- * ---------------------------------------------------
- * ext: constant string of the file extension.
- *
- * return: the string value of the media type ready to be appended.
- */
-char*
-match_ext(const char* ext) {
-
-    // Defining the matched media type string.
-    char* media = malloc(sizeof(char) * 256);
-    int i;
-
-    // Loop through possible media types and return the right one.
-    for(i=0;i<MEDIA_NUM;i++) {
-
-        // If the string extension matches one of the possibilities.
-        if(!(strcmp(medias[i].ext, ext))) {
-            strcpy(media, medias[i].mime);
-            return media;
-        }
-    }
-
-    // I know I shouldn't be returning null but...
-    return NULL;
-}
-
-
-/* Check if the file exists
- * ------------------------
- * path: The absolute path of the file passed as a string 
- *
- * return: The reponse code required to handle the file
- */
-int 
-check_file_exist(char* path) {
-    // If file does not exists...
-    if(access(path, F_OK) < 0) {
-        return 0;
-    }
-    // If file does exists...
-    return 1;
-}
