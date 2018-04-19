@@ -57,7 +57,6 @@ void* thread_activity(void* arg);
 char* concat(char* s1, char* s2);
 void print_res(int sockfd, char* response,char* file, int bytes, char* mimetype);
 void read_file(char* path, buffer_info* bf);
-void copy_to_buffer(FILE *fp, int *n, char* buffer);
 char* parse_header(const char *str, const char *space);
 char* find_extension(char* str);
 char* match_ext(const char* ext);
@@ -172,8 +171,6 @@ main(int argc, char *argv[])
             perror("ERROR on creating thread");
             exit(1);
         }
-        
-        //thread_activity(&thread_arg);
 
         // Detach pthread **HERE**
         int error_d = pthread_detach(tid);
@@ -181,8 +178,6 @@ main(int argc, char *argv[])
             perror("ERROR on detaching thread");
             exit(1);
         }
-
-        //free(thread_arg.root_path);
     }
     
 
@@ -235,7 +230,6 @@ void* thread_activity(void* thread_arg) {
     // Concatenate the relative_path with the given root
     char* abs_path = concat(root, relative_path);
     free(relative_path);
-    
 
 
     // Create a buffer info struct and default the length to 0
@@ -288,8 +282,6 @@ void* thread_activity(void* thread_arg) {
 
     // Free 
 
-
-
     return NULL;
 
 }
@@ -299,7 +291,6 @@ void* thread_activity(void* thread_arg) {
 /* Helper Functions
  *
  */
-
 
 
 /* Concatenate function to appending one string to another 
@@ -333,11 +324,6 @@ concat(char* s1, char* s2) {
  */
 void 
 print_res(int sockfd, char* response, char* file , int bytes, char* mimetype) {
-    //printf("%d\n", sockfd);
-    //printf("%s\n", response);
-    //printf("%s\n", file);
-    //printf("%d\n", bytes);
-    //printf("%s\n", mimetype);
 
     // Check the type of response coming in.
     if(bytes) {
@@ -387,25 +373,6 @@ read_file(char* path, buffer_info* bf) {
     /* Using fread */
     fread(buffer, 1, file_len, fp);
 
-    /* Using Manual Reading */
-    /*
-    int n = 0;
-
-    // Copy file contents into buffer.
-    int c;
-
-    // While end of file not reached.
-    while((c = getc(fp)) != EOF) {
-        //printf("%c",c);
-        //fflush(stdout);
-        // Copies each character into the buffer.
-        buffer[n++] = c; 
-
-    }
-
-    */
-    //copy_to_buffer(fp, &n, buffer);
-
     // Close the file.
     fclose(fp);
 
@@ -413,17 +380,7 @@ read_file(char* path, buffer_info* bf) {
     bf->buff_len = file_len;
 }
 
-/* Copy the contents of the file into the buffer string
- * ----------------------------------------------------
- * fp: Pointer to the file object to read from.
- * n : Iterator to make sure the buffer is appended to correctly.
- * buffer: The char array to copy the binary file into respective string onto.
- */ 
-void
-copy_to_buffer(FILE *fp, int *n, char* buffer) {
 
-   
-}
 
 /* Parses the read buffer for the URI of the file requested
  * ---------------------------------------------------------
