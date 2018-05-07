@@ -1,0 +1,9 @@
+.idea/
+cmake-build-debug/
+server
+test/
+test2/
+test_log.txt
+test_script.sh
+test_script_break.sh
+
